@@ -12,14 +12,14 @@ import           System.IO
 import           Utility
 
 inputFile :: String
-inputFile = "test5.txt"
+inputFile = "test9.txt"
 
 outputFile :: String
 outputFile = "output.txt"
 
 data Prop = Prop {
     index        :: Int,
-    strExpr      :: String,
+    -- strExpr      :: String,
     expr         :: Expr,
     indexOfAxiom :: Maybe Int,
     indexOfHypo  :: Maybe Int,
@@ -36,7 +36,7 @@ getAnnotate prop = case indexOfAxiom prop of
             Nothing       -> "(Не доказано)"
 
 instance Show Prop where
-    show prop = "(" ++ (show $ index prop) ++ ") "  ++ strExpr prop ++ " " ++ getAnnotate prop
+    show prop = "(" ++ (show $ index prop) ++ ") "  ++ (show . expr) prop ++ " " ++ getAnnotate prop
 
 
 getExpr :: String -> Expr
@@ -46,7 +46,6 @@ getExpr s = case parseExpr (alexScanTokens s) of
 
 toProp :: (Int, String) -> Prop
 toProp (i, s) = Prop {index = i,
-                    strExpr = s,
                     expr = getExpr s,
                     indexOfAxiom = Nothing,
                     indexOfHypo = Nothing,
@@ -93,10 +92,10 @@ isAxiom _  = Nothing
 
 
 annotateAxiom :: Prop -> Prop
-annotateAxiom prop@(Prop i s e ia ih ismp) = (Prop i s e (isAxiom $ expr prop) ih ismp)
+annotateAxiom prop = prop{indexOfAxiom =  (isAxiom $ expr prop)}
 
 annotateHypos :: Map.Map Expr Int -> Prop -> Prop
-annotateHypos mapOfHypos prop@(Prop i s e ia ih ismp) = Prop i s e ia (Map.lookup e mapOfHypos) ismp
+annotateHypos mapOfHypos prop = prop{indexOfHypo = (Map.lookup (expr prop) mapOfHypos)}
 
 splitImpl :: Expr -> Maybe (Expr, Expr)
 splitImpl (Binary Impl a b) = Just (a, b)
@@ -135,10 +134,10 @@ annotateMP props = map (checkMP $ getMapMP props) props where
 
 main :: IO ()
 main = do
-    writeFile outputFile "Debug\n"
+    writeFile outputFile ""
     file <- readFile inputFile
     file <- return $ removeSpace file
-    lineOfFiles <- return $ lines file
+    lineOfFiles <- return $ filter (not . null) (lines file)
     headFile <- return $ splitOn2 ('|', '-') (head lineOfFiles) --TODO
     lineOfFiles <- return $ drop 1 lineOfFiles
     hypos <- return $ splitOn1 ',' (head headFile)

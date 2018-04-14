@@ -1,9 +1,9 @@
-# HC=/opt/ghc/7.10.3/bin/ghc
-HC=ghc
+HC=/opt/ghc/7.10.3/bin/ghc
+# HC=ghc
 SOURCES=src/Main.hs src/Grammar.hs
 GEN_SOURCES=src/Lexer.x src/Parser.y
 GENERATED=src/Lexer.hs src/Parser.hs
-PACKAGE=hw0.zip
+PACKAGE=hw1.zip
 
 .PHONY: pack all run clean
 

@@ -19,10 +19,7 @@ removeSpace = foldr f "" where
             | otherwise = c : acc
 
 removeSpaces :: [String] -> [String]
-removeSpaces = map f where
-    f' c acc | c == ' ' || c == '\t' || c == '\r' = acc
-             | otherwise = c : acc
-    f = foldr f' ""
+removeSpaces = map removeSpace
 
 insertIfAbsent :: Ord k => k -> a -> Map k a -> Map k a
 insertIfAbsent k a m = case Map.lookup k m of
@@ -39,7 +36,6 @@ splitOn2 (a, b) xs = reverse $ func (a, b) xs [] [] where
             else func (c, d) (b : xs) (rs ++ [a]) xss
     func _ [a] rs xss = (rs ++ [a]) : xss
     func _ [] rs xss = rs : xss
-    func _ _ _ _ = error "splitOn2 have error"
 --TODO O(N * N) :(
 
 splitOn1 :: Char -> [Char] -> [[Char]]

@@ -6,9 +6,9 @@ data Binop = Impl | Or | And
     deriving (Eq, Ord)
 
 instance Show Binop where
-  show Impl = "Impl"
-  show Or   = "Or"
-  show And  = "And"
+  show Impl = "->"
+  show Or   = "|"
+  show And  = "&"
 
 data Expr = Binary Binop Expr Expr
           | Not Expr
@@ -24,6 +24,6 @@ instance Eq Expr where
     (==) _ _ = False
 
 instance Show Expr where
-  show (Binary op a b) = "(" ++ intercalate "," [show op, show a, show b] ++ ")"
-  show (Not e)         = "(!" ++ show e ++ ")"
-  show (Var name)      = name
+    show (Binary op a b) = "(" ++ show a ++ ")" ++ show op ++ "(" ++ show b ++ ")"
+    show (Not e) = "!(" ++ show e ++ ")"
+    show (Var name) = name
