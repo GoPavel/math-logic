@@ -1,4 +1,4 @@
-module Main where
+module Main(main) where
 
 import           Data.List
 import           Control.Monad
@@ -9,23 +9,13 @@ import           Grammar
 import           Lexer           (alexScanTokens)
 import           Parser          (parseExpr)
 import           System.IO
+import           Utility
 
 inputFile :: String
-inputFile = "test1.txt"
+inputFile = "test5.txt"
 
 outputFile :: String
 outputFile = "output.txt"
-
-removeSpace :: String -> String
-removeSpace str = foldr f "" str where
-    f c acc | (c == ' ' || c == '\t' || c == '\r') = acc
-            | otherwise = c : acc
-
-removeSpaces :: [String] -> [String]
-removeSpaces strs = map f strs where
-    f' c acc | (c == ' ' || c == '\t' || c == '\r') = acc
-             | otherwise = c : acc
-    f str = foldr f' "" str
 
 data Prop = Prop {
     index        :: Int,
@@ -42,7 +32,7 @@ getAnnotate prop = case indexOfAxiom prop of
     Nothing -> case indexOfHypo prop of
         (Just i) -> "(Предп. " ++ show i ++ ")"
         Nothing -> case mp prop of
-            (Just (a, b)) -> "M. P. " ++ show a ++ ", " ++ show b ++ ")"
+            (Just (a, b)) -> "(M.P. " ++ show a ++ ", " ++ show b ++ ")"
             Nothing       -> "(Не доказано)"
 
 instance Show Prop where
@@ -51,7 +41,7 @@ instance Show Prop where
 
 getExpr :: String -> Expr
 getExpr s = case parseExpr (alexScanTokens s) of
-    Left err   -> error "error parse!!! in \"toProp\""
+    Left err   -> error "error parse!!!"
     Right expr -> expr
 
 toProp :: (Int, String) -> Prop
@@ -112,63 +102,61 @@ splitImpl :: Expr -> Maybe (Expr, Expr)
 splitImpl (Binary Impl a b) = Just (a, b)
 splitImpl _ = Nothing
 
-isNothing :: Maybe a -> Bool
-isNothing (Just a) = False
-isNothing Nothing = True
-
-isJust :: Maybe a -> Bool
-isJust = not . isNothing
-
-formJust :: Maybe a -> a
-formJust (Just a) =  a
-fromJust Nothing = undefined
-
-fromListToMultiMap :: [(Expr, Expr)] -> Map.Map Expr (Set.Set Expr)
-fromListToMultiMap dexprs = add (Map.empty :: Map.Map Expr (Set.Set Expr)) dexprs
-    where
-        add :: Map.Map Expr (Set.Set Expr) -> [(Expr, Expr)] -> Map.Map Expr (Set.Set Expr)
-        add mmap ((e1, e2):dexprs) = add
-                                    (
-                                     if isNothing (Map.lookup e1 mmap)
-                                     then Map.insert e1 (Set.singleton e2) mmap
-                                     else Map.insert e1 (Set.insert e2 (fromJust $ Map.lookup e1 mmap))  mmap
-                                     )
-                                     dexprs
-        add mmap _ = mmap
-
-
 oneIsAxiomOrHypo :: Prop -> Bool
-oneIsAxiomOrHypo Prop{ a = indexOfAxiom, b = indexOfHypo} = isJust a && isJust b
+oneIsAxiomOrHypo Prop{ indexOfAxiom = a, indexOfHypo = b} = isJust a && isJust b
 
-annotateMP :: Prop -> Map.Map Expr (Set.Set Expr) -> (Prop, Map.Map Expr (Set.Set Expr))
-annotateMP prop mmap =
-    if isNothing (Map.lookup (expr prop) mmap)
-    then (prop, mmap)
+
+annotateMP :: [Prop] -> [Prop]
+annotateMP props = map (checkMP $ getMapMP props) props where
+        -- A , A -> B, B
+--
+        toExpr :: [Prop] -> [Expr]
+        toExpr = map expr
+--
+        getMapA :: [Prop] -> Map.Map Expr Int
+        getMapA props = Map.fromListWith min $ zip (toExpr props) [1..]
+--
+        getMapMP :: [Prop] -> Map.Map Expr (Int, Int)
+        getMapMP props = let
+            step :: [Expr] -> Int -> Map.Map Expr Int -> Map.Map Expr (Int, Int) -> Map.Map Expr (Int, Int)
+            step (x:xs) i mapA acc = case splitImpl x of
+                Just (a, b) -> case Map.lookup a mapA of
+                                Nothing -> step xs (i+1) mapA acc
+                                Just j -> step xs (i+1) mapA (insertIfAbsent b (i, j) acc)
+                Nothing -> step xs (i+1) mapA acc
+            step _ i mapA acc = acc
+            in step (toExpr props) 1 (getMapA props) (Map.empty :: Map.Map Expr (Int, Int))
+
+        checkMP :: Map.Map Expr (Int, Int) -> Prop -> Prop
+        checkMP mapMP prop@Prop{expr = e, index = i} = prop {
+            mp = case Map.lookup e mapMP of
+                    Nothing -> Nothing
+                    p@(Just (j, k)) -> if i > j && i > k then p else Nothing }
 
 main :: IO ()
 main = do
+    writeFile outputFile "Debug\n"
     file <- readFile inputFile
     file <- return $ removeSpace file
     lineOfFiles <- return $ lines file
-    headFile <- return $ splitOn "|-" (head lineOfFiles)
+    headFile <- return $ splitOn "|-" ("Z" ++ head lineOfFiles) --TODO
     lineOfFiles <- return $ drop 1 lineOfFiles
     hypos <- return $ splitOn "," (head headFile)
-    hypos <- return $ map getExpr hypos
+    hypos <- return $ if null hypos then [] else map getExpr hypos
     hypos <- return $ Map.fromList (zip hypos ([1..]::[Int]))
     props <- return $ toProps lineOfFiles
     props <- return $ map annotateAxiom props
     props <- return $ map (annotateHypos hypos) props
     -- conclusion <- return $ getExpr $ last headFile
-    alreadyExpr <- return $ map expr $ filter (\p -> isJust (indexOfAxiom p) && isJust (indexOfHypo p) ) props
-    setProved <- return $ Set.fromList alreadyExpr
-    mapBimplA <- return $ fromListToMultiMap $ map fromJust $ filter isJust $ map splitImpl alreadyExpr
-    writeFile outputFile ""
+    -- alreadyExpr <- return $ map expr $ filter (\p -> isJust (indexOfAxiom p) && isJust (indexOfHypo p) ) props
+    props <- return $ annotateMP props
     -- writeFile outputFile $ "\nHypos:\n" ++ show hypos
     -- appendFile outputFile $ "\nconclusion:\n" ++ conclusion
     -- appendFile outputFile $ "\nprops:\n" ++ intercalate "\n" (map show props)
     -- appendFile outputFile $ intercalate "\n" (map (show . getExpr) lineOfFiles)
     appendFile outputFile (intercalate "\n" (map show props))
---1:[2] 2:[] []
+
+-- 1:[2] 2:[] []
 -- [1..60000] <=> init: 1, inc : (+ 1)
 -- summ acc [] = acc
 -- summ acc [x:xs] = summ (acc + x) xs
