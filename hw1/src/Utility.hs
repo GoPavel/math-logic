@@ -28,3 +28,27 @@ insertIfAbsent :: Ord k => k -> a -> Map k a -> Map k a
 insertIfAbsent k a m = case Map.lookup k m of
     Just old  -> m
     Nothing -> insert k a m
+
+splitOn2 :: (Char, Char) -> [Char] -> [[Char]]
+splitOn2 _ [] = []
+splitOn2 (a, b) xs = reverse $ func (a, b) xs [] [] where
+    func :: (Char, Char) -> [Char] -> [Char] -> [[Char]] -> [[Char]]
+    func (c, d) (a:b:xs) rs xss =
+        if a == c && b == d
+            then func (c, d) xs [] (rs : xss)
+            else func (c, d) (b : xs) (rs ++ [a]) xss
+    func _ [a] rs xss = (rs ++ [a]) : xss
+    func _ [] rs xss = rs : xss
+    func _ _ _ _ = error "splitOn2 have error"
+--TODO O(N * N) :(
+
+splitOn1 :: Char -> [Char] -> [[Char]]
+splitOn1 _ [] = []
+splitOn1 ch xs = reverse $ func ch xs [] [] where
+    func :: Char -> [Char] -> [Char] -> [[Char]] -> [[Char]]
+    func ch (x:xs) rs xss =
+        if x == ch
+            then func ch xs [] (rs : xss)
+            else func ch xs (rs ++ [x]) xss
+    func _ [] rs xss = rs : xss
+--TODO O(N * N) :(

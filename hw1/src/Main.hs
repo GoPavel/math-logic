@@ -2,7 +2,7 @@ module Main(main) where
 
 import           Data.List
 import           Control.Monad
-import           Data.List.Split
+-- import           Data.List.Split
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import           Grammar
@@ -139,9 +139,9 @@ main = do
     file <- readFile inputFile
     file <- return $ removeSpace file
     lineOfFiles <- return $ lines file
-    headFile <- return $ splitOn "|-" ("Z" ++ head lineOfFiles) --TODO
+    headFile <- return $ splitOn2 ('|', '-') (head lineOfFiles) --TODO
     lineOfFiles <- return $ drop 1 lineOfFiles
-    hypos <- return $ splitOn "," (head headFile)
+    hypos <- return $ splitOn1 ',' (head headFile)
     hypos <- return $ if null hypos then [] else map getExpr hypos
     hypos <- return $ Map.fromList (zip hypos ([1..]::[Int]))
     props <- return $ toProps lineOfFiles
