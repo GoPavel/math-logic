@@ -41,10 +41,10 @@ splitOn2 (a, b) xs = reverse $ func (a, b) xs [] [] where
     func :: (Char, Char) -> String -> String -> [String] -> [String]
     func (c, d) (a:b:xs) rs xss =
         if a == c && b == d
-            then func (c, d) xs [] (rs : xss)
-            else func (c, d) (b : xs) (rs ++ [a]) xss
-    func _ [a] rs xss = (rs ++ [a]) : xss
-    func _ [] rs xss = rs : xss
+            then func (c, d) xs [] (reverse rs : xss)
+            else func (c, d) (b : xs) (a : rs) xss
+    func _ [a] rs xss = reverse (a : rs) : xss
+    func _ [] rs xss = reverse rs : xss
 --TODO O(N * N) :(
 
 splitOn1 :: Char -> String -> [String]
@@ -53,7 +53,7 @@ splitOn1 ch xs = reverse $ func ch xs [] [] where
     func :: Char -> String -> String -> [String] -> [String]
     func ch (x:xs) rs xss =
         if x == ch
-            then func ch xs [] (rs : xss)
-            else func ch xs (rs ++ [x]) xss
-    func _ [] rs xss = rs : xss
+            then func ch xs [] (reverse rs : xss)
+            else func ch xs (x : rs) xss
+    func _ [] rs xss = reverse rs : xss
 --TODO O(N * N) :(

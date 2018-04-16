@@ -1,0 +1,6 @@
+ABC, ABD, ASD, ASDK |- A
+ABC
+ABD
+ASDK
+ASD
+A->A

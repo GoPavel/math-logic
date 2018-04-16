@@ -123,7 +123,7 @@ annotateMP props = map (checkMP $ getMapMP props) props where
             mp = case Map.lookup e mapMP of
                     Nothing -> Nothing
                     p@(Just (j, k)) -> if i > j && i > k then p else Nothing }
-
+                    
 main :: IO ()
 main = do
     writeFile outputFile ""
