@@ -14,11 +14,11 @@ run: parser
 
 clean:
 	rm -rf src/*.o src/*.hi
-	rm -rf $(GENERATED)
+	# rm -rf $(GENERATED)
 	rm -f parser
 
 parser: $(GENERATED) $(SOURCES)
-	$(HC) -i./src -tmpdir . ./src/Main.hs -o parser
+	$(HC) -O3 -i./src -tmpdir . ./src/Main.hs -o parser
 
 $(GENERATED): $(GEN_SOURCES) $(SOURCES)
 	alex src/Lexer.x -o src/Lexer.hs

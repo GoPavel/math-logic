@@ -24,12 +24,21 @@ removeSpaces = map removeSpace
 insertIfAbsent :: Ord k => k -> a -> Map k a -> Map k a
 insertIfAbsent k a m = case Map.lookup k m of
     Just old  -> m
-    Nothing -> insert k a m
+    Nothing -> Map.insert k a m
 
-splitOn2 :: (Char, Char) -> [Char] -> [[Char]]
+-- p (x , old) = 1 => x -> map
+-- p (x , old) = 0 => map
+insertIfAbsentIf :: Ord k => (a -> a -> Bool) -> k -> a -> Map k a -> Map k a
+insertIfAbsentIf p k a m = case Map.lookup k m of
+    Nothing -> Map.insert k a m
+    Just old -> if p a old
+                then Map.insert k a m
+                else m
+
+splitOn2 :: (Char, Char) -> String -> [String]
 splitOn2 _ [] = []
 splitOn2 (a, b) xs = reverse $ func (a, b) xs [] [] where
-    func :: (Char, Char) -> [Char] -> [Char] -> [[Char]] -> [[Char]]
+    func :: (Char, Char) -> String -> String -> [String] -> [String]
     func (c, d) (a:b:xs) rs xss =
         if a == c && b == d
             then func (c, d) xs [] (rs : xss)
@@ -38,10 +47,10 @@ splitOn2 (a, b) xs = reverse $ func (a, b) xs [] [] where
     func _ [] rs xss = rs : xss
 --TODO O(N * N) :(
 
-splitOn1 :: Char -> [Char] -> [[Char]]
+splitOn1 :: Char -> String -> [String]
 splitOn1 _ [] = []
 splitOn1 ch xs = reverse $ func ch xs [] [] where
-    func :: Char -> [Char] -> [Char] -> [[Char]] -> [[Char]]
+    func :: Char -> String -> String -> [String] -> [String]
     func ch (x:xs) rs xss =
         if x == ch
             then func ch xs [] (rs : xss)

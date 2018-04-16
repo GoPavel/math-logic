@@ -12,7 +12,7 @@ import           System.IO
 import           Utility
 
 inputFile :: String
-inputFile = "test9.txt"
+inputFile = "input.txt"
 
 outputFile :: String
 outputFile = "output.txt"
@@ -54,48 +54,35 @@ toProp (i, s) = Prop {index = i,
 toProps :: [String] -> [Prop]
 toProps strs = map toProp (zip [1..] strs)
 
-strBefore :: String -> String -> String
-strBefore sep str = let (Just index) = elemIndex '-' str
-                    in take (index - 1) str
-
--- annotate :: [String] -> -> [String]
--- annotate hypos conclusion prots
-
 isAxiom :: Expr -> Maybe Int
+isAxiom (Binary Impl a1 (Binary Impl b1 a2))
+    | a1 == a2 =                                                Just 1
 isAxiom (Binary Impl (Binary Impl a1 b1) (Binary Impl (Binary Impl a2 (Binary Impl b2 c1)) (Binary Impl a3 c2)))
     | a1 == a2 && a2 == a3 && b1 == b2 && c1 == c2 =            Just 2
-    | otherwise =  Nothing
 isAxiom (Binary Impl a1 (Binary Impl b1 (Binary And a2 b2)))
     | a1 == a2 && b1 == b2 =                                    Just 3
-    | otherwise =  Nothing
 isAxiom (Binary Impl (Binary And a b) c)
     | a == c =                                                  Just 4
     | b == c =                                                  Just 5
-    | otherwise = Nothing
 isAxiom (Binary Impl c (Binary Or a b))
     | c == a =                                                  Just 6
     | c == b =                                                  Just 7
-    | otherwise =  Nothing
 isAxiom (Binary Impl (Binary Impl a1 c1) (Binary Impl (Binary Impl b1 c2) (Binary Impl (Binary Or a2 b2) c3)))
     | a1 == a2 && c1 == c2 && c2 == c3 && b1 == b2 =            Just 8
-    | otherwise =  Nothing
 isAxiom (Binary Impl (Binary Impl a1 b1) (Binary Impl (Binary Impl a2 (Not b2)) (Not a3)))
     | a1 == a2 && a2 == a3 && b1 == b2 =                        Just 9
-    | otherwise =  Nothing
 isAxiom (Binary Impl (Not (Not a1)) a2)
     | a1 == a2 =                                                Just 10
-    | otherwise =  Nothing
-isAxiom (Binary Impl a1 (Binary Impl b1 a2))
-    | a1 == a2 =                                                Just 1
-    | otherwise =  Nothing
-isAxiom _  = Nothing
+isAxiom _  =                                                    Nothing
+
+
 
 
 annotateAxiom :: Prop -> Prop
 annotateAxiom prop = prop{indexOfAxiom =  (isAxiom $ expr prop)}
 
 annotateHypos :: Map.Map Expr Int -> Prop -> Prop
-annotateHypos mapOfHypos prop = prop{indexOfHypo = (Map.lookup (expr prop) mapOfHypos)}
+annotateHypos mapOfHypos prop = prop{indexOfHypo = Map.lookup (expr prop) mapOfHypos}
 
 splitImpl :: Expr -> Maybe (Expr, Expr)
 splitImpl (Binary Impl a b) = Just (a, b)
@@ -104,24 +91,29 @@ splitImpl _ = Nothing
 oneIsAxiomOrHypo :: Prop -> Bool
 oneIsAxiomOrHypo Prop{ indexOfAxiom = a, indexOfHypo = b} = isJust a && isJust b
 
-
 annotateMP :: [Prop] -> [Prop]
 annotateMP props = map (checkMP $ getMapMP props) props where
-        -- A , A -> B, B
---
+        -- A , A -> B
+
         toExpr :: [Prop] -> [Expr]
         toExpr = map expr
---
+
         getMapA :: [Prop] -> Map.Map Expr Int
         getMapA props = Map.fromListWith min $ zip (toExpr props) [1..]
---
+
         getMapMP :: [Prop] -> Map.Map Expr (Int, Int)
         getMapMP props = let
             step :: [Expr] -> Int -> Map.Map Expr Int -> Map.Map Expr (Int, Int) -> Map.Map Expr (Int, Int)
             step (x:xs) i mapA acc = case splitImpl x of
                 Just (a, b) -> case Map.lookup a mapA of
                                 Nothing -> step xs (i+1) mapA acc
-                                Just j -> step xs (i+1) mapA (insertIfAbsent b (i, j) acc)
+                                Just j -> step xs (i+1) mapA (
+                                                            -- insertIfAbsent
+                                                            insertIfAbsentIf
+                                                            (\(a, b) (c, d) -> (max a b) < (max c d))
+                                                            b
+                                                            (i, j)
+                                                            acc)
                 Nothing -> step xs (i+1) mapA acc
             step _ i mapA acc = acc
             in step (toExpr props) 1 (getMapA props) (Map.empty :: Map.Map Expr (Int, Int))
@@ -147,7 +139,6 @@ main = do
     props <- return $ map annotateAxiom props
     props <- return $ map (annotateHypos hypos) props
     -- conclusion <- return $ getExpr $ last headFile
-    -- alreadyExpr <- return $ map expr $ filter (\p -> isJust (indexOfAxiom p) && isJust (indexOfHypo p) ) props
     props <- return $ annotateMP props
     -- writeFile outputFile $ "\nHypos:\n" ++ show hypos
     -- appendFile outputFile $ "\nconclusion:\n" ++ conclusion

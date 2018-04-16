@@ -1,4 +1,4 @@
-ABC
+|-ABC
 A -> (B -> A)
 (A -> B) -> (A -> B -> C) -> (A -> C)
 A -> B -> A & B
