@@ -9,8 +9,8 @@ isNothing Nothing = True
 isJust :: Maybe a -> Bool
 isJust = not . isNothing
 
-formJust :: Maybe a -> a
-formJust (Just a) =  a
+fromJust :: Maybe a -> a
+fromJust (Just a) =  a
 fromJust Nothing = undefined
 
 removeSpace :: String -> String
@@ -45,7 +45,7 @@ splitOn2 (a, b) xs = reverse $ func (a, b) xs [] [] where
             else func (c, d) (b : xs) (a : rs) xss
     func _ [a] rs xss = reverse (a : rs) : xss
     func _ [] rs xss = reverse rs : xss
---TODO O(N * N) :(
+--TODO O(N) :)
 
 splitOn1 :: Char -> String -> [String]
 splitOn1 _ [] = []
@@ -56,4 +56,8 @@ splitOn1 ch xs = reverse $ func ch xs [] [] where
             then func ch xs [] (reverse rs : xss)
             else func ch xs (x : rs) xss
     func _ [] rs xss = reverse rs : xss
---TODO O(N * N) :(
+--TODO O(N) :)
+
+dropTail :: Int -> [a] -> [a]
+dropTail i xs = reverse $ drop i (reverse xs)
+-- O(N)
