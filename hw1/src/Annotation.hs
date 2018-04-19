@@ -1,4 +1,4 @@
-module Main(main) where
+module Annotation(parseAndAnnotate) where
 
 import           Data.List
 import           Control.Monad
@@ -10,12 +10,6 @@ import           Lexer           (alexScanTokens)
 import           Parser          (parseExpr)
 import           System.IO
 import           Utility
-
-inputFile :: String
-inputFile = "input.txt"
-
-outputFile :: String
-outputFile = "output.txt"
 
 data Prop = Prop {
     index        :: Int,
@@ -123,9 +117,9 @@ annotateMP props = map (checkMP $ getMapMP props) props where
             mp = case Map.lookup e mapMP of
                     Nothing -> Nothing
                     p@(Just (j, k)) -> if i > j && i > k then p else Nothing }
-                    
-main :: IO ()
-main = do
+
+parseAndAnnotate :: String -> String -> IO ()
+parseAndAnnotate  inputFile outputFile = do
     writeFile outputFile ""
     file <- readFile inputFile
     file <- return $ removeSpace file
