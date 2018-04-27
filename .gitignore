@@ -1,5 +1,7 @@
 *.hi
 *.o
-*output.txt
+output.txt
 *.zip
 */dist/*
+Lexer.hs
+Parser.hs
