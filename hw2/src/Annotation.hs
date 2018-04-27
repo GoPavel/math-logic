@@ -128,12 +128,9 @@ annotateMP props = map (checkMP $ getMapMP props) props where
                 Just (a, b) -> case Map.lookup a mapA of
                                 Nothing -> step xs (i+1) mapA acc
                                 Just j -> step xs (i+1) mapA (
-                                                            -- insertIfAbsent
                                                             insertIfAbsentIf
                                                             (\(a, b) (c, d) -> (max a b) < (max c d))
-                                                            b
-                                                            (i, j)
-                                                            acc)
+                                                            b (i, j) acc)
                 Nothing -> step xs (i+1) mapA acc
             step _ i mapA acc = acc
             in step (toExpr props) 1 (getMapA props) (Map.empty :: Map.Map Expr (Int, Int))
