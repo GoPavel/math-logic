@@ -64,3 +64,11 @@ dropTail i xs = reverse $ drop i (reverse xs)
 
 doIfElse ∷ Bool → a → b → Either b a
 doIfElse flag r l = if flag then Right r else Left l
+
+formRight ∷ Either a b → b
+formRight (Right b) = b
+formRight (Left _) = undefined
+
+formLeft ∷ Either a b → a
+formLeft (Left a) = a
+formLeft (Right _) = undefined

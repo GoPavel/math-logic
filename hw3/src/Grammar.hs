@@ -15,6 +15,10 @@ import Data.List (intercalate)
 --           | Var String
 --       deriving (Ord)
 
+infixr 3 :->
+infixl 4 :|
+infixl 5 :&
+
 data Expr = Expr :& Expr
           | Expr :| Expr
           | Expr :-> Expr
