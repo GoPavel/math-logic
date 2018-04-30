@@ -1,98 +1,16 @@
-{-# LANGUAGE UnicodeSyntax   #-}
+{-# LANGUAGE UnicodeSyntax #-}
 
-module Annotation where
+module Annotation(annotate) where
 
-import           Data.List
 import           Control.Monad
--- import           Data.List.Split
+import           Data.List
 import qualified Data.Map.Strict as Map
-import qualified Data.Set as Set
+import qualified Data.Set        as Set
+import           ExprUtil        (checkAxiom)
 import           Grammar
-import           Lexer           (alexScanTokens)
-import           Parser          (parseExpr)
+import           Proof
 import           System.IO
 import           Utility
-
-data Prop = Prop {
-    index        ∷ Int,
-    -- strExpr      ∷ String,
-    getExpr      ∷ Expr,
-    indexOfAxiom ∷ Maybe Int,
-    indexOfHypo  ∷ Maybe Int,
-    mp           ∷ Maybe (Int, Int) }
-    deriving (Eq, Ord)
-
-data Proof = Proof {
-    getHypothesis ∷ [Expr],
-    getConclusion ∷ Expr,
-    getProps ∷ [Prop]
-}
-
-getMap ∷ [Prop] → Map.Map Int Expr
-getMap props = Map.fromList (map (\prop → (index prop, getExpr prop)) props)
-
-isAxiom ∷ Prop → Bool
-isAxiom = isJust . indexOfAxiom
-
-isHypos ∷ Prop → Bool
-isHypos = isJust . indexOfHypo
-
-isMP ∷ Prop → Bool
-isMP = isJust . mp
-
-instance Show Proof where
-    show (Proof hypos concl props) =
-        intercalate "," (map show hypos) ++ "|-" ++
-        show concl ++ "\n" ++
-        intercalate "\n" (map (show . getExpr) props)
-
-nonAnnotated ∷ Int → Expr → Prop
-nonAnnotated i e = Prop{
-        index = i,
-        getExpr = e,
-        indexOfAxiom = Nothing,
-        indexOfHypo = Nothing,
-        mp = Nothing
-    }
-
-getAnnotate ∷ Prop → String
-getAnnotate prop = case indexOfAxiom prop of
-    (Just i) → "(Сх. акс. " ++ show i ++ ")"
-    Nothing → case indexOfHypo prop of
-        (Just i) → "(Предп. " ++ show i ++ ")"
-        Nothing → case mp prop of
-            (Just (a, b)) → "(M.P. " ++ show a ++ ", " ++ show b ++ ")"
-            Nothing       → "(Не доказано)"
-
-instance Show Prop where
-    show prop = "(" ++ show (index prop) ++ ") "  ++ (show . getExpr) prop ++ " " ++ getAnnotate prop
-
-
-exprFormString ∷ String → Expr
-exprFormString s = case parseExpr (alexScanTokens s) of
-    Left err   → error "error parse!!!"
-    Right expr → expr
-    
-checkAxiom ∷ Expr → Maybe Int
-checkAxiom (a1 :-> b :-> a1)
-    | a1 == a2 =                                                Just 1
-checkAxiom ((a1 :-> b1) :-> (a2 :-> b2 :-> c1) :-> (a3 :-> c2))
-    | a1 == a2 && a2 == a3 && b1 == b2 && c1 == c2 =            Just 2
-checkAxiom (a1 :-> b1 :-> a2 :& b2)
-    | a1 == a2 && b1 == b2 =                                    Just 3
-checkAxiom (a :& b :-> c)
-    | a == c =                                                  Just 4
-    | b == c =                                                  Just 5
-checkAxiom (c :-> a :| b)
-    | c == a =                                                  Just 6
-    | c == b =                                                  Just 7
-checkAxiom ((a1 :-> b1) :-> (c1 :-> b2) :-> (a2 :| c2 :-> b3))
-    | a1 == a2 && c1 == c2 && b1 == b2 && b2 == b3 =            Just 8
-checkAxiom ((a1 :-> b1) :-> (a2 :-> Not b2) :-> Not a3)
-    | a1 == a2 && a2 == a3 && b1 == b2 =                        Just 9
-checkAxiom (a1 :-> Not (Not a2))
-    | a1 == a2 =                                                Just 10
-checkAxiom _  =                                                 Nothing
 
 annotateAxiom ∷ Prop → Prop
 annotateAxiom prop = prop{indexOfAxiom = checkAxiom $ getExpr prop}
@@ -101,13 +19,6 @@ annotateHypos ∷ [Expr] → Prop → Prop
 annotateHypos hypos prop = prop{indexOfHypo = Map.lookup (getExpr prop) mapOfHypos}
  where
      mapOfHypos =  Map.fromList (zip hypos ([1..]∷[Int]))
-
-splitImpl ∷ Expr → Maybe (Expr, Expr)
-splitImpl (a :-> b) = Just (a, b)
-splitImpl _ = Nothing
-
-oneIsAxiomOrHypo ∷ Prop → Bool
-oneIsAxiomOrHypo Prop{ indexOfAxiom = a, indexOfHypo = b} = isJust a && isJust b
 
 annotateMP ∷ [Prop] → [Prop]
 annotateMP props = map (checkMP $ getMapMP props) props where
@@ -136,26 +47,14 @@ annotateMP props = map (checkMP $ getMapMP props) props where
         checkMP ∷ Map.Map Expr (Int, Int) → Prop → Prop
         checkMP mapMP prop@Prop{getExpr = e, index = i} = prop {
             mp = case Map.lookup e mapMP of
-                    Nothing → Nothing
+                    Nothing         → Nothing
                     p@(Just (j, k)) → if i > j && i > k then p else Nothing }
 
-annotate ∷ ([Expr], Expr, [Expr]) → Maybe Proof
-annotate (hypos, conclusion, props) = do
-    props ← return $ (annotateMP . map (
-        annotateHypos .
-        annotateAxiom .
-        uncarry nonAnnotated) .
-        zip ([1..]::Int)) props
-    return (Proof hypos conclusion props)
-
-parseAndAnnotate ∷ String → Maybe Proof
-parseAndAnnotate text = do
-    text ← return $ removeSpace text
-    lineOfFiles ← return $ filter (not . null) (lines text)
-    headFile ← return $ splitOn2 ('|', '-') (head lineOfFiles)
-    lineOfFiles ← return $ drop 1 lineOfFiles
-    hypos ← return $ splitOn1 ',' (head headFile)
-    conclusion ← return $ exprFormString $ last headFile
-    hypos ← return $ if null hypos then [] else map exprFormString hypos
-    props ← return $ map exprFormString lineOfFiles
-    return annotate (hypos, conclusion, props)
+annotate ∷ ([Expr], Expr, [Expr]) → Proof
+annotate (hypos, conclusion, exprs) =
+    let props = (annotateMP .
+                map (   annotateHypos .
+                        annotateAxiom .
+                        uncarry nonAnnotated)
+                . zip ([1..]::Int)) exprs
+    in Proof hypos conclusion props

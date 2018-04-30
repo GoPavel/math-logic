@@ -27,7 +27,7 @@ data Proof = Proof {
 }
 
 getMap :: [Prop] -> Map.Map Int Expr
-getMap props = Map.fromList (map (\prop -> (index prop, expr prop)) props) 
+getMap props = Map.fromList (map (\prop -> (index prop, expr prop)) props)
 
 isAxiom = isJust . indexOfAxiom
 isHypos = isJust . indexOfHypo

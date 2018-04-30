@@ -1,50 +1,52 @@
-module Deduction where
+{-# LANGUAGE UnicodeSyntax #-}
 
-import Annotation
-import Grammar
-import Utility
+module Deduction(deduce) where
+
+import           Annotation      (annotate)
 import qualified Data.Map.Strict as Map
+import           ExprUtil (proofAToA)
+import           Grammar
+import           Proof
+import           Utility
 
-aToA ∷ Expr → [Expr]
+deduce ∷ ([Expr], Expr, [Expr]) → ([Expr], Expr, [Expr])
+deduce = deduceWithAnnotation . annotate
 
-applyDeduction :: Proof -> Proof
-applyDeduction (Proof hypos conclusion proofs) = (Proof trHypos trConclusion trProofs) where
+deduceWithAnnotation ∷ Proof → ([Expr], Expr, [Expr])
+applyDeduction (Proof hypos conclusion proofs) = (trHypos, trConclusion, trProofs) where
     alpha = last hypos
-
-    addAlpha e = alpha :-> e
-
-    axiom1 a b = a :-> (b :-> a)
 
     axiom2 a b c = (a :-> b) :-> (a :-> b :-> c) :-> (a :-> c)
 
-    alphaToAlpha e = (shc5 e : shc4 e : shc3 e : shc2 e : [shc1 e])  where
-        shc1 e = e :-> e :-> e
-        shc2 e = (e :-> (e :-> e)) :-> (e :-> ((e :-> e) :-> e)) :-> (e :-> e)
-        shc3 e = (e :-> ((e :-> e) :-> e)) :-> (e :-> e)
-        shc4 e = (e :-> ((e :-> e) :-> e))
-        shc5 e = e :-> e
-
-    getProofMP :: Prop -> Map.Map Int Expr -> Maybe [Expr]
+    getProofMP ∷ Prop → Map.Map Int Expr → Maybe [Expr]
     getProofMP Prop{expr = e, mp = Just (i, j)} m = do
         (dj, di) <- splitImpl $ fromJust $ Map.lookup i m
-        return (alpha :-> di : ((alpha :-> (dj :-> di)) :-> (alpha :-> di)) : [axiom2 alpha dj di])
+        return  (   alpha :-> di
+                :   ((alpha :-> (dj :-> di)) :-> (alpha :-> di))
+                :   [axiom2 alpha dj di]
+                )
     getProofMP _ _ = Nothing
 
 
-    trHypos :: [Expr]
+    trHypos ∷ [Expr]
     trHypos = dropTail 1 hypos
 
-    trConclusion :: Expr
-    trConclusion = addAlpha conclusion
+    trConclusion ∷ Expr
+    trConclusion = aplha :-> conclusion
 
-    nonAnnotated' = nonAnnotated 0
-
-    trProofs :: [Prop]
+    trProofs ∷ [Expr]
     trProofs = step proofs (getMap proofs) [] where
-        step :: [Prop] -> Map.Map Int Expr -> [Expr] -> [Prop]
+        step ∷ [Prop] → Map.Map Int Expr → [Expr] → [Expr]
         step (p@Prop{expr = e}:ps) m stack
-            | e == alpha = step ps m (alphaToAlpha e ++ stack)
-            | isAxiom p || isHypos p = step ps m ( alpha :-> e : e : axiom1 e alpha : stack )
-            | isMP p = step ps m $ (fromJust $ getProofMP p m) ++ stack
+            | e == alpha = step ps m (proofAToA e ++ stack)
+            | isAxiom p || isHypos p = step ps m (  alpha :-> e
+                                                 :  e
+                                                 :  e :-> alpha :-> e
+                                                 :  stack
+                                                 )
+            | isMP p = step ps m $ fromJust (getProofMP p m) ++ stack
             | otherwise = error "Не доказательство"
-        step [] _ stack = map nonAnnotated' (reverse stack)
+        step [] _ stack = reverse stack
+
+        getMap ∷ [Prop] → Map.Map Int Expr
+        getMap props = Map.fromList (map (\prop → (index prop, getExpr prop)) props)

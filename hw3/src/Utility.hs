@@ -72,3 +72,7 @@ formRight (Left _) = undefined
 formLeft ∷ Either a b → a
 formLeft (Left a) = a
 formLeft (Right _) = undefined
+
+third ∷ [a] → a
+third (_:_:c:_) = c
+third _ = undefined
