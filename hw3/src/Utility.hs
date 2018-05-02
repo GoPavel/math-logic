@@ -1,17 +1,25 @@
-module Utility where
+{-# LANGUAGE UnicodeSyntax #-}
 
-import Data.Map.Strict  as Map (Map, lookup, insert)
+module Utility (    isNothing, isJust, fromJust, removeSpace, removeSpaces, insertIfAbsent,
+                    insertIfAbsentIf, splitOn1, splitOn2, dropTail, doIfElse, fromRight,
+                    fromLeft, third, exprFormString, splitImpl, showAll, showLines, showCom) where
+
+import           Data.List
+import           Data.Map.Strict as Map (Map, insert, lookup)
+import           Grammar
+import           Lexer           (alexScanTokens)
+import           Parser          (parseExpr)
 
 isNothing ∷ Maybe a → Bool
 isNothing (Just _) = False
-isNothing Nothing = True
+isNothing Nothing  = True
 
 isJust ∷ Maybe a → Bool
 isJust = not . isNothing
 
 fromJust ∷ Maybe a → a
 fromJust (Just a) =  a
-fromJust Nothing = undefined
+fromJust Nothing  = undefined
 
 removeSpace ∷ String → String
 removeSpace = foldr f "" where
@@ -23,8 +31,8 @@ removeSpaces = map removeSpace
 
 insertIfAbsent ∷ Ord k => k → a → Map k a → Map k a
 insertIfAbsent k a m = case Map.lookup k m of
-    Just old  → m
-    Nothing → Map.insert k a m
+    Just old → m
+    Nothing  → Map.insert k a m
 
 -- p (x , old) = 1 => x → map
 -- p (x , old) = 0 => map
@@ -65,14 +73,31 @@ dropTail i xs = reverse $ drop i (reverse xs)
 doIfElse ∷ Bool → a → b → Either b a
 doIfElse flag r l = if flag then Right r else Left l
 
-formRight ∷ Either a b → b
-formRight (Right b) = b
-formRight (Left _) = undefined
+fromRight ∷ Either a b → b
+fromRight (Right b) = b
+fromRight (Left _)  = undefined
 
-formLeft ∷ Either a b → a
-formLeft (Left a) = a
-formLeft (Right _) = undefined
+fromLeft ∷ Either a b → a
+fromLeft (Left a)  = a
+fromLeft (Right _) = undefined
 
-third ∷ [a] → a
-third (_:_:c:_) = c
-third _ = undefined
+third ∷ (a, b, c) → c
+third (_, _, c) = c
+
+exprFormString ∷ String → Expr
+exprFormString s = case parseExpr (alexScanTokens s) of
+    Left err   → error "error parse!!!"
+    Right expr → expr
+
+splitImpl ∷ Expr → Maybe (Expr, Expr)
+splitImpl (a :-> b) = Just (a, b)
+splitImpl _         = Nothing
+
+showAll ∷ Show a => String → [a] → String
+showAll str = (intercalate str) . (map show)
+
+showLines ∷ Show a => [a] → String
+showLines = showAll "\n"
+
+showCom ∷ Show a => [a] → String
+showCom = showAll ", "

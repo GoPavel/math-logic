@@ -2,8 +2,9 @@
 
 module Proof where
 
-import Grammar
-import Utility
+import           Data.List
+import           Grammar
+import           Utility
 
 data Prop = Prop {
     index        ∷ Int,
@@ -37,23 +38,4 @@ instance Show Proof where
     show (Proof hypos concl props) =
         intercalate "," (map show hypos) ++ "|-" ++
         show concl ++ "\n" ++
-        intercalate "\n" (map (show . getExpr) props)
-
-
-nonAnnotated ∷ Int → Expr → Prop
-nonAnnotated i e = Prop{
-        index = i,
-        getExpr = e,
-        indexOfAxiom = Nothing,
-        indexOfHypo = Nothing,
-        mp = Nothing
-    }
-
-isAxiom ∷ Prop → Bool
-isAxiom = isJust . indexOfAxiom
-
-isHypos ∷ Prop → Bool
-isHypos = isJust . indexOfHypo
-
-isMP ∷ Prop → Bool
-isMP = isJust . mp
+        intercalate "\n" (map show props)

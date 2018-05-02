@@ -1,3 +1,5 @@
+{-# LANGUAGE UnicodeSyntax #-}
+
 module Grammar where
 
 import           Data.List (intercalate)
@@ -27,12 +29,3 @@ instance Show Expr where
     show (a :-> b)  = "(" ++ show a ++ ")->(" ++ show b ++ ")"
     show (Not e)    = "!(" ++ show e ++ ")"
     show (Var name) = name
-
-exprFormString ∷ String → Expr
-exprFormString s = case parseExpr (alexScanTokens s) of
-    Left err   → error "error parse!!!"
-    Right expr → expr
-
-splitImpl ∷ Expr → Maybe (Expr, Expr)
-splitImpl (a :-> b) = Just (a, b)
-splitImpl _         = Nothing
