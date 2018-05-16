@@ -1,5 +1,6 @@
 *.hi
 *.o
+input.txt
 output.txt
 *.zip
 */dist/*
