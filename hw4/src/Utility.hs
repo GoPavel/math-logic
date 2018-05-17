@@ -1,8 +1,8 @@
 {-# LANGUAGE UnicodeSyntax #-}
 
 module Utility (    isNothing, isJust, fromJust, removeSpace, removeSpaces, insertIfAbsent,
-                    insertIfAbsentIf, splitOn1, splitOn2, dropTail, doIfElse, fromRight,
-                    fromLeft, third, showAll, showLines, showCom) where
+                    insertIfAbsentIf, splitOn1, splitOn2, dropTail, eitherIfElse, fromRight,
+                    fromLeft, third, showAll, showLines, showCom, times, listSqr) where
 
 import           Data.List
 import           Data.Map.Strict as Map (Map, insert, lookup)
@@ -67,8 +67,8 @@ dropTail ∷ Int → [a] → [a]
 dropTail i xs = reverse $ drop i (reverse xs)
 -- O(N)
 
-doIfElse ∷ Bool → a → b → Either b a
-doIfElse flag r l = if flag then Right r else Left l
+eitherIfElse ∷ Bool → a → b → Either b a
+eitherIfElse flag r l = if flag then Right r else Left l
 
 fromRight ∷ Either a b → b
 fromRight (Right b) = b
@@ -89,3 +89,9 @@ showLines = showAll "\n"
 
 showCom ∷ Show a => [a] → String
 showCom = showAll ", "
+
+times ∷ [a] → [b] → [(a, b)]
+times as bs = foldl (\s a -> s ++ zip (repeat a) bs) [] as
+
+listSqr ∷ [a] → [(a, a)]
+listSqr xs = times xs xs

@@ -2,7 +2,7 @@
 
 module Main(main) where
 
-import qualified Lattice (check)
+import qualified Lattice (check, debug)
 import           System.IO (readFile, writeFile)
 import qualified Data.Set        as Set
 import qualified Data.Map.Strict as Map
@@ -20,5 +20,6 @@ main = do
     text ← return $ map (filter (not . null)) $ map (splitOn1 ' ') text
     let graph = Map.fromList $ zip [1..] $ map (map (\x -> read x :: Int)) text
     writeFile outputFile ""
-    writeFile outputFile $ Lattice.check graph
+    -- writeFile outputFile $ Lattice.check graph
+    writeFile outputFile $ Lattice.debug graph
     -- writeFile outputFile $ Map.showTree graph
