@@ -9,7 +9,7 @@ import qualified Data.Set        as Set
 import           Utility
 
 data Relation = L | G | N | E
-    deriving (Show)
+    deriving (Show, Eq)
 
 -- String{graph} → String{answer}
 check ∷ Map.Map Int [Int] → String
@@ -54,26 +54,26 @@ getRelationTable graph =
           E → table
 
 isLess ∷ Map.Map (Int, Int) Relation → (Int, Int) → Bool
-isLess table (a, b) = case (a, b) Map.! table of
+isLess table (a, b) = case table Map.! (a, b) of
   L → True
   E → True
   _ → False
 
 isGreater ∷ Map.Map (Int, Int) Relation → (Int, Int) → Bool
-isGreater table (a, b) = case (a, b) Map.! table of
+isGreater table (a, b) = case table Map.! (a, b) of
   G → True
   E → True
   _ → False
 
 isEq ∷ Map.Map (Int, Int) Relation → (Int, Int) → Bool
-isEq table (a, b) = (a, b) Map.! table == E
+isEq table (a, b) = table Map.! (a, b) == E
 
 isNon ∷ Map.Map (Int, Int) Relation → (Int, Int) → Bool
-isNon table (a, b) = (a, b) Map.! table == N
+isNon table (a, b) = table Map.! (a, b) == N
 
 
 -- checkSum (listSqr vs) ab table
-checkSum ∷ [(Int, Int)] → [Int] → Map.Map (Int, Int) Relation → Either (Map.Map (Int, Int) Int) String
+checkSum ∷ [(Int, Int)] → [Int] → Map.Map (Int, Int) Relation → Either String (Map.Map (Int, Int) Int)
 checkSum pairs vs table = foldl checkPair (Right Map.empty) pairs
     where
         candidates ∷ (Int, Int) → [Int]
@@ -85,26 +85,26 @@ checkSum pairs vs table = foldl checkPair (Right Map.empty) pairs
         minCandidate cs = foldl min' Nothing cs
             where
                 min' ∷ Maybe Int → Int → Maybe Int
-                min' m@(Just curMin) x = case (m, x) Map.! table of
+                min' curMin@(Just m) x = case table Map.! (m, x) of
                     L → Just m
                     G → Just m
                     E → Nothing
                     N → Nothing
                 min' Nothing x = Just x
 
-        checkPair ∷ Either (Map.Map (Int, Int) Int) String → (Int, Int) → Either (Map.Map (Int, Int) Int) String
+        checkPair ∷ Either String (Map.Map (Int, Int) Int) → (Int, Int) → Either String (Map.Map (Int, Int) Int)
         checkPair sums@(Left msg) _ = sums
         checkPair sums@(Right sumTable) pair@(a, b) =
             case minCandidate $ candidates pair of
-                Nothing  → Left "Операция \'+\' не определена " ++ show a ++ "+" ++ show b
-                (Just m) → sumTable `Map.insert` (pair, m)
+                Nothing  → Left $ "Операция \'+\' не определена " ++ show a ++ "+" ++ show b
+                (Just m) → Right $ Map.insert pair m sumTable
 
 
-checkTimes ∷ Map.Map Int [Int] → Map.Map (Int, Int) Relation → Either (Map.Map (Int, Int) Int) String
+checkTimes ∷ Map.Map Int [Int] → Map.Map (Int, Int) Relation → Either String (Map.Map (Int, Int) Int)
 checkTimes = undefined
 
 checkDistr ∷ Map.Map Int [Int] → Map.Map (Int, Int) Int
-                               → Map.Map (Int, Int) Int → Either (Map.Map (Int, Int) Int) String
+                               → Map.Map (Int, Int) Int → Either String (Map.Map (Int, Int) Int)
 checkDistr = undefined
 
 -- checkImpl ∷ Map.Map Int [Int] → Either String String
