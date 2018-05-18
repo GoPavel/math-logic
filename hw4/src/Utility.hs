@@ -2,7 +2,8 @@
 
 module Utility (    isNothing, isJust, fromJust, removeSpace, removeSpaces, insertIfAbsent,
                     insertIfAbsentIf, splitOn1, splitOn2, dropTail, eitherIfElse, fromRight,
-                    fromLeft, third, showAll, showLines, showCom, times, listSqr) where
+                    fromLeft, third, showAll, showLines, showCom, times, times3, listSqr,
+                    listCube) where
 
 import           Data.List
 import           Data.Map.Strict as Map (Map, insert, lookup)
@@ -93,5 +94,11 @@ showCom = showAll ", "
 times ∷ [a] → [b] → [(a, b)]
 times as bs = foldl (\s a -> s ++ zip (repeat a) bs) [] as
 
+times3 ∷ [a] → [b] → [c] → [(a, b, c)]
+times3 as bs cs = foldl (\s a -> s ++ (map (\(b, c) ->  (a, b, c)) (bs `times` cs))) [] as
+
 listSqr ∷ [a] → [(a, a)]
 listSqr xs = times xs xs
+
+listCube ∷ [a] → [(a, a, a)]
+listCube xs = times3 xs xs xs

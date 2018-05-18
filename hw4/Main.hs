@@ -15,7 +15,9 @@ import           Utility (splitOn1)
 -- inputFile =  "tests/nonSum12.txt"
 -- inputFile =  "tests/nonTimes34.txt"
 -- inputFile =  "tests/ok4.txt"
--- inputFile =  "tests/ok7.txt"
+inputFile =  "tests/ok9.txt"
+-- inputFile =  "tests/nonDistr7.txt"
+-- inputFile =  "tests/nonDistr.txt"
 
 
 outputFile = "output.txt"
@@ -29,6 +31,6 @@ main = do
     text ← return $ map (filter (not . null)) $ map (splitOn1 ' ') text
     let graph = Map.fromList $ zip [1..] $ map (map (\x -> read x :: Int)) text
     writeFile outputFile $ "> "++ inputFile ++ "\n"
-    appendFile outputFile $ Lattice.debug graph
-    -- writeFile outputFile $ Lattice.check graph
+    -- appendFile outputFile $ Lattice.debug graph
+    appendFile outputFile $ Lattice.check graph
     -- writeFile outputFile $ Map.showTree graph
