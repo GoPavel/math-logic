@@ -11,12 +11,27 @@ import           Utility
 data Relation = L | G | N | E
     deriving (Show, Eq)
 
+sumFail (a, b) = "Операция \'+\' не определена " ++ show a ++ "+" ++ show b
+timesFail (a, b) = "Операция \'*\' не определена " ++ show a ++ "*" ++ show b
+distrFail (a, b, c) = undefined
+
 -- String{graph} → String{answer}
 check ∷ Map.Map Int [Int] → String
 check = undefined
 
 debug ∷ Map.Map Int [Int] → String
-debug g = showLines $ Map.toList $ getRelationTable g
+-- debug g = showLines $ Map.toList $ getRelationTable g
+debug g =
+    let table = getRelationTable g
+    in case checkTimes g table of
+        (Left str) → str
+        (Right timesTable) → showLines $ Map.toList timesTable
+-- debug g =
+    -- let table = getRelationTable g
+    -- in case checkSum g table of
+    --     (Left str) → str
+    --     (Right sumTable) → showLines $ Map.toList sumTable
+
 
 
 getRelationTable ∷ Map.Map Int [Int] → Map.Map (Int, Int) Relation
@@ -54,31 +69,36 @@ getRelationTable graph =
           E → table
 
 isLess ∷ Map.Map (Int, Int) Relation → (Int, Int) → Bool
-isLess table (a, b) = case table Map.! (a, b) of
-  L → True
-  E → True
-  _ → False
+isLess table pair = table Map.! pair == L
 
 isGreater ∷ Map.Map (Int, Int) Relation → (Int, Int) → Bool
-isGreater table (a, b) = case table Map.! (a, b) of
-  G → True
-  E → True
-  _ → False
+isGreater table pair = table Map.! pair == G
 
 isEq ∷ Map.Map (Int, Int) Relation → (Int, Int) → Bool
-isEq table (a, b) = table Map.! (a, b) == E
+isEq table pair = table Map.! pair == E
 
 isNon ∷ Map.Map (Int, Int) Relation → (Int, Int) → Bool
-isNon table (a, b) = table Map.! (a, b) == N
+isNon table pair = table Map.! pair == N
 
+isGreaterEq ∷ Map.Map (Int, Int) Relation → (Int, Int) → Bool
+isGreaterEq table pair = isGreater table pair || isEq table pair
+
+isLessEq ∷ Map.Map (Int, Int) Relation → (Int, Int) → Bool
+isLessEq table pair = isLess table pair || isEq table pair
 
 -- checkSum (listSqr vs) ab table
-checkSum ∷ [(Int, Int)] → [Int] → Map.Map (Int, Int) Relation → Either String (Map.Map (Int, Int) Int)
-checkSum pairs vs table = foldl checkPair (Right Map.empty) pairs
+checkSum ∷  Map.Map Int [Int] → Map.Map (Int, Int) Relation → Either String (Map.Map (Int, Int) Int)
+checkSum graph table = foldl evalSumPair (Right Map.empty) pairs
     where
+        vs ∷ [Int]
+        vs = Map.keys graph
+
+        pairs ∷ [(Int, Int)]
+        pairs = listSqr vs
+
         candidates ∷ (Int, Int) → [Int]
         candidates (a, b) =
-            let predicate c = isGreater table (c, a) && isGreater table (c, b)
+            let predicate c = isGreaterEq table (c, a) && isGreaterEq table (c, b)
             in filter predicate vs
 
         minCandidate ∷ [Int] → Maybe Int
@@ -86,22 +106,63 @@ checkSum pairs vs table = foldl checkPair (Right Map.empty) pairs
             where
                 min' ∷ Maybe Int → Int → Maybe Int
                 min' curMin@(Just m) x = case table Map.! (m, x) of
-                    L → Just m
-                    G → Just m
+                    L → curMin
+                    G → Just x
                     E → Nothing
                     N → Nothing
                 min' Nothing x = Just x
 
-        checkPair ∷ Either String (Map.Map (Int, Int) Int) → (Int, Int) → Either String (Map.Map (Int, Int) Int)
-        checkPair sums@(Left msg) _ = sums
-        checkPair sums@(Right sumTable) pair@(a, b) =
-            case minCandidate $ candidates pair of
-                Nothing  → Left $ "Операция \'+\' не определена " ++ show a ++ "+" ++ show b
-                (Just m) → Right $ Map.insert pair m sumTable
+        checkUniqueMin ∷ Int → [Int] → Bool
+        checkUniqueMin m xs = all (\x → isGreater table (x, m) || x == m) xs
 
+        evalSumPair ∷ Either String (Map.Map (Int, Int) Int) → (Int, Int) → Either String (Map.Map (Int, Int) Int)
+        evalSumPair sums@(Left msg) _ = sums
+        evalSumPair sums@(Right sumTable) pair =
+            let mins = candidates pair
+            in case minCandidate mins of
+                Nothing  → Left $ sumFail pair
+                -- (Just m) → if True
+                (Just m) → if checkUniqueMin m mins
+                    then Right $ Map.insert pair m sumTable
+                    else Left $ sumFail pair
 
 checkTimes ∷ Map.Map Int [Int] → Map.Map (Int, Int) Relation → Either String (Map.Map (Int, Int) Int)
-checkTimes = undefined
+checkTimes graph table = foldl evalTimesPair (Right Map.empty) pairs
+    where
+        vs ∷ [Int]
+        vs = Map.keys graph
+
+        pairs ∷ [(Int, Int)]
+        pairs = listSqr vs
+
+        candidates ∷ (Int, Int) → [Int]
+        candidates (a, b) =
+            let predicate x = isLessEq table (x, a) && isLessEq table (x, b)
+            in filter predicate vs
+
+        maxCandidate ∷ [Int] → Maybe Int
+        maxCandidate cs = foldl max' Nothing cs
+            where
+                max' ∷ Maybe Int → Int → Maybe Int
+                max' curMax@(Just m) x = case table Map.! (m, x) of
+                    L → Just x
+                    G → curMax
+                    E → Nothing
+                    N → Nothing
+                max' Nothing x = Just x
+
+        checkUniqueMax ∷ Int → [Int] → Bool
+        checkUniqueMax m xs = all (\x -> isLess table (x, m) || x == m) xs
+
+        evalTimesPair ∷ Either String (Map.Map (Int, Int) Int) → (Int, Int) → Either String (Map.Map (Int, Int) Int)
+        evalTimesPair times@(Left msg) _ = times
+        evalTimesPair times@(Right timesTable) pair =
+            let maxs = candidates pair
+            in case maxCandidate maxs of
+                Nothing → Left $ timesFail pair
+                (Just m) → if checkUniqueMax m maxs
+                    then Right $ Map.insert pair m timesTable
+                    else Left $ timesFail pair
 
 checkDistr ∷ Map.Map Int [Int] → Map.Map (Int, Int) Int
                                → Map.Map (Int, Int) Int → Either String (Map.Map (Int, Int) Int)

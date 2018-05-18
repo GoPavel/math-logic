@@ -8,7 +8,16 @@ import qualified Data.Set        as Set
 import qualified Data.Map.Strict as Map
 import           Utility (splitOn1)
 
-inputFile = "input.txt"
+-- inputFile = "input.txt"
+-- inputFile =  "tests/one.txt"
+-- inputFile =  "tests/cycle3.txt"
+-- inputFile =  "tests/line3.txt"
+-- inputFile =  "tests/nonSum12.txt"
+-- inputFile =  "tests/nonTimes34.txt"
+-- inputFile =  "tests/ok4.txt"
+-- inputFile =  "tests/ok7.txt"
+
+
 outputFile = "output.txt"
 
 main ∷ IO()
@@ -19,7 +28,7 @@ main = do
     text ← return $ drop 1 text
     text ← return $ map (filter (not . null)) $ map (splitOn1 ' ') text
     let graph = Map.fromList $ zip [1..] $ map (map (\x -> read x :: Int)) text
-    writeFile outputFile ""
+    writeFile outputFile $ "> "++ inputFile ++ "\n"
+    appendFile outputFile $ Lattice.debug graph
     -- writeFile outputFile $ Lattice.check graph
-    writeFile outputFile $ Lattice.debug graph
     -- writeFile outputFile $ Map.showTree graph
