@@ -1,28 +1,21 @@
-# HC=/opt/ghc/7.10.3/bin/ghc
-HC=ghc
-# SOURCES=Main.hs src/Grammar.hs src/Deduction.hs src/Proof.hs src/ProofGenerator.hs src/Utility.hs src/Annotation.hs TODO
-# GEN_SOURCES=src/Lexer.x src/Parser.y TODO
-# GENERATED=src/Lexer.hs src/Parser.hs TODO
+HC=/opt/ghc/7.10.3/bin/ghc
+# HC=ghc
+SOURCES=Main.hs src/Lattice.hs src/Utility.hs
 PACKAGE=hw4.zip
 
 .PHONY: pack all run clean
 
-all: parser
+all: lattice
 
-run: parser
-	./parser
+run: lattice
+	./lattice
 
 clean:
 	rm -rf src/*.o src/*.hi
-	# rm -rf $(GENERATED)
-	rm -f parser
+	rm -f lattice
 
-parser: $(GENERATED) $(SOURCES)
-	$(HC) -O3 -i./src -tmpdir . ./Main.hs -o parser
+lattice: $(SOURCES)
+	$(HC) -O3 -i./src -tmpdir . ./Main.hs -o lattice
 
-$(GENERATED): $(GEN_SOURCES) $(SOURCES)
-	alex src/Lexer.x -o src/Lexer.hs
-	happy src/Parser.y -o src/Parser.hs
-
-pack: $(GENERATED)
+pack:
 	zip $(PACKAGE) -r Makefile src Main.hs

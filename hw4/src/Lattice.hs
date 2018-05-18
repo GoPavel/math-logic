@@ -11,29 +11,32 @@ import           Utility
 data Relation = L | G | N | E
     deriving (Show, Eq)
 
-sumFail (a, b) = "Операция \'+\' не определена: " ++ show a ++ "+" ++ show b
+sumFail (a, b)   = "Операция \'+\' не определена: " ++ show a ++ "+" ++ show b
 timesFail (a, b) = "Операция \'*\' не определена: " ++ show a ++ "*" ++ show b
+implFail (a, b)  = "Операция \'->\' не определена: " ++ show a ++ "->" ++ show b
 distrFail (a, b, c) = "Нарушается дистрибутивность: "
     ++ show a ++ "*(" ++ show b ++ "+" ++ show c ++ ")"
-implFail (a, b) = "Операция \'->\' не определена: " ++ show a ++ "->" ++ show b
 boolableFail a = "Не булева алгебра: " ++ show a ++ "+~" ++ show a
 
 -- String{graph} → String{answer}
 check ∷ Map.Map Int [Int] → String
 check graph = case check' of
-    (Left msg) -> msg
+    (Left msg)  -> msg
     (Right msg) -> msg
     where
         check' ∷ Either String String
         check' = do
-            let relTable = getRelationTable graph
+            let rel = getRelationTable graph
             let vs = Map.keys graph
-            sumTable ← checkSum vs relTable
-            timesTable ← checkTimes vs relTable
-            let debugMessages = "\n\n" ++ showLines (Map.toList sumTable) ++
-                                "\n\n" ++ showLines (Map.toList timesTable)
-            isDistr ← checkDistr vs sumTable timesTable
-            return $ "Булева алгебра" ++ debugMessages
+            sums ← checkSum vs rel
+            times ← checkTimes vs rel
+            checkDistr vs sums times
+            impl ← checkImpl vs rel times
+            -- let debugMessages = "\n\n" ++ showLines (Map.toList sums) ++
+                                -- "\n\n" ++ showLines (Map.toList times) ++
+                                -- "\n\n" ++ showLines (Map.toList impl)
+            checkBoolable vs rel sums impl
+            return $ "Булева алгебра" -- ++ debugMessages
 
 
 debug ∷ Map.Map Int [Int] → String
@@ -57,17 +60,17 @@ debug g = undefined
 --         (Right msg) -> msg
 
 
-checkImpl ∷ [Int] → Map.Map (Int, Int) Relation → Map.Map (Int, Int) Int → (Int, Int) →
-    Either String (Map.Map (Int, Int) Int)
-checkImpl vs rel timesT (a, b) = foldl impl' (Right Map.empty) (listSqr vs)
+checkImpl ∷ [Int] → Map.Map (Int, Int) Relation
+                  → Map.Map (Int, Int) Int → Either String (Map.Map (Int, Int) Int)
+checkImpl vs rel timesT = foldl impl' (Right Map.empty) (listSqr vs)
     where
         impl' ∷ Either String (Map.Map (Int, Int) Int) → (Int, Int) → Either String (Map.Map (Int, Int) Int)
         impl' acc@(Left _) _ = acc
-        impl' acc@(Right t) pair@(a, b) =
-            let candidates = filter (\x -> isGreaterEq rel (timesT Map.! (x, a), b)) vs
+        impl' acc@(Right accT) pair@(a, b) =
+            let candidates = filter (\x -> isLessEq rel (timesT Map.! (x, a), b)) vs
             in case maxCandidate rel candidates of
-                Nothing → Left $ implFail pair
-                (Just m) → Right $ Map.insert pair m t
+                Nothing  → Left $ implFail pair
+                (Just m) → Right $ Map.insert pair m accT
 
 checkBoolable ∷ [Int] → Map.Map (Int, Int) Relation
                       → Map.Map (Int, Int) Int
@@ -77,7 +80,7 @@ checkBoolable vs rel sumT impl = foldl check (Right "Ok") vs
         check ∷ Either String String → Int → Either String String
         check acc@(Left _) _ =  acc
         check acc@(Right _) a =
-            let left =  impl Map.! (a, zero)
+            let left = sumT Map.! (a, impl Map.! (a, zero))
             in if left == one
                 then Right "Ok"
                 else Left $ boolableFail a
@@ -210,7 +213,7 @@ checkDistr ∷ [Int] → Map.Map (Int, Int) Int
                    → Map.Map (Int, Int) Int → Either String String
 checkDistr vs sumTable timesTable = case foldl checkTriple Nothing triples of
     (Just str) → Left str
-    Nothing → Right "Ok"
+    Nothing    → Right "Ok"
     where
         triples ∷ [(Int, Int, Int)]
         triples = listCube vs
