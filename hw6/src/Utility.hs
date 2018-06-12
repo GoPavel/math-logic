@@ -9,6 +9,7 @@ import           Data.List
 import           Data.Map.Strict as Map (Map, insert, lookup)
 import           Lexer           (alexScanTokens)
 import           Parser          (parseExpr)
+import           Grammar
 
 isNothing ∷ Maybe a → Bool
 isNothing (Just _) = False
