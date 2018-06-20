@@ -12,6 +12,7 @@ import           Data.List
 import           Data.Function
 
 data World = World {
+    worldIndex ∷ Int,
     worldVars ∷ Set.Set String,
     worldNexts ∷ [World]
 }
@@ -52,18 +53,18 @@ parseAndGetAnswer text = case parseAndGetAnswer' text of
         return $ show $ kripkeToHeything kripke
 
 readKripke ∷ [String] → Kripke
-readKripke strs = Kripke{kripkeRoots = worldNexts $ recur strs [emptyWorld] 0}
+readKripke strs = Kripke{kripkeRoots = worldNexts $ recur 0 strs [emptyWorld] 0}
  where
     addSon ∷ World → World → World
     addSon p v = p{worldNexts = v : worldNexts p }
 
-    recur ∷ [String] → [World] → Int → World
-    recur [] [root] depth = root
-    recur (str:strs) (v:stack) depth =
+    recur ∷ Int → [String] → [World] → Int → World
+    recur index [] [root] depth = root
+    recur index (str:strs) (v:stack) depth =
         let cntSpace = length $ takeWhile (/= '*') str
             varsFormString = splitOn1 ',' $ dropWhile (== ' ') $ drop (cntSpace + 1) str
-            newWorld = emptyWorld{worldVars = Set.fromList varsFormString}
-            call'recur stack =  recur strs stack cntSpace
+            newWorld = emptyWorld{worldVars = Set.fromList varsFormString, worldIndex = index}
+            call'recur stack =  recur (index + 1) strs stack cntSpace
         in  if cntSpace > depth then call'recur (newWorld : addSon v newWorld : stack)
             else if cntSpace == depth then call'recur (addSon v newWorld : stack)
             else case drop (depth - cntSpace) (v : stack) of
@@ -103,8 +104,36 @@ checkExprInWorld world expr = case expr of
         implPred a b = \x → not (checkExprInWorld x a) || checkExprInWorld x b
 
 kripkeToHeything ∷ Kripke → Heyting -- TODO
-kripkeToHeything world = undefined -- where
---
---     all = map getSubTree root
---
---     getelements
+kripkeToHeything world = undefined
+
+    where
+        getBaseSet ∷ World → Set.Set Int → Set.Set Int
+        getBaseSet World{worldNexts = sons, worldIndex = index} set =
+            foldr getBaseSet (index `Set.insert` set) sons
+
+        getAllBaseSet ∷ Kripke → [Set.Set Int]
+        getAllBaseSet Kripke{kripkeRoots = roots} = concatMap (`dfs` []) roots where
+            dfs ∷ World → [Set.Set Int] → [Set.Set Int]
+            dfs world list = foldr dfs (getBaseSet world Set.empty : list) (worldNexts world)
+
+
+        getAllOpenSet ∷ Kripke → [Set.Set Int]
+        getAllOpenSet kripke = recur (getAllBaseSet kripke) [] where
+            recur ∷ [Set.Set Int] → [Set.Set Int] → [Set.Set Int]
+            recur (set : sets) acc =
+                recur sets (set : acc) ++ recur sets acc
+            recur [] acc = [foldr Set.union Set.empty acc]
+
+        makeGraph ∷ Kripke → Map.Map Int [Int]
+        makeGraph kripke = Map.fromAscList $ map (\v -> (v, getConnection v)) (Map.keys sets) where
+            openSets = getAllOpenSet kripke
+            sets = Map.fromAscList $ zip [1..] openSets
+            getConnection ∷ Int → [Int]
+            getConnection v = filter (`isParent` v) (Map.keys sets)
+
+            isParent ∷ Int -> Int -> Bool
+            isParent v u = (sets Map.! v) `Set.isSubsetOf` (sets Map.! u)
+
+ -- TODO set Var
+ --     TODO save Var
+ --     TODO find max
