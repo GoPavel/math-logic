@@ -3,9 +3,8 @@
 module Kripke (kripkeToHeything, readKripke, checkExprInKripke,
                checkKripke, World(..), parseAndGetAnswer) where
 
-
 import           Grammar
-import           Utility (exprFormString, eitherIfElse, splitOn1)
+import           Utility (exprFormString, eitherIfElse, splitOn1, fromRight)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import           Control.Monad
@@ -13,11 +12,16 @@ import           Data.List
 import           Data.Function
 
 data World = World {
-    worldVars ∷ [String],
-    worldNexts ∷ [World] }
+    worldVars ∷ Set.Set String,
+    worldNexts ∷ [World]
+}
 
-emptyWorld :: World
-emptyWorld = World{worldVars = [], worldNexts = []}
+data Kripke = Kripke {
+    kripkeRoots :: [World]
+}
+
+emptyWorld ∷ World
+emptyWorld = World{worldVars = Set.empty, worldNexts = []}
 
 data Heyting = Heyting {
     heytingGraph ∷ Map.Map Int [Int],
@@ -42,18 +46,14 @@ parseAndGetAnswer text = case parseAndGetAnswer' text of
     parseAndGetAnswer' text = do
         let linesOfText = lines text
         let expr = exprFormString $ head linesOfText
-        kripke <- readKripke $ drop 1 linesOfText
+        kripke <- Right $ readKripke $ drop 1 linesOfText
         eitherIfElse (checkKripke kripke) "Не модель Крипке" "Ok1"
         eitherIfElse (checkExprInKripke kripke expr)  "Не опровергает формулу" "Ok2"
         return $ show $ kripkeToHeything kripke
 
-readKripke ∷ [String] → Either String World
-readKripke strs = if length (worldNexts root) == 1
-    then Right $ head $ worldNexts root
-    else Left "Не дерево"
+readKripke ∷ [String] → Kripke
+readKripke strs = Kripke{kripkeRoots = worldNexts $ recur strs [emptyWorld] 0}
  where
-    root = recur strs [emptyWorld] 0
-
     addSon ∷ World → World → World
     addSon p v = p{worldNexts = v : worldNexts p }
 
@@ -62,27 +62,29 @@ readKripke strs = if length (worldNexts root) == 1
     recur (str:strs) (v:stack) depth =
         let cntSpace = length $ takeWhile (/= '*') str
             varsFormString = splitOn1 ',' $ dropWhile (== ' ') $ drop (cntSpace + 1) str
-            newWorld = emptyWorld{worldVars =  varsFormString}
+            newWorld = emptyWorld{worldVars = Set.fromList varsFormString}
             call'recur stack =  recur strs stack cntSpace
         in  if cntSpace > depth then call'recur (newWorld : addSon v newWorld : stack)
             else if cntSpace == depth then call'recur (addSon v newWorld : stack)
             else case drop (depth - cntSpace) (v : stack) of
                 (v:vs) → call'recur (addSon v newWorld : vs)
 
-checkKripke ∷ World → Bool
-checkKripke root = checkKripke' root Set.empty  where
+checkKripke ∷ Kripke → Bool
+checkKripke kripke = all (`checkKripke'` Set.empty) (kripkeRoots kripke)  where
     checkKripke' ∷ World → Set.Set String → Bool
-    checkKripke' World{worldNexts = nexts, worldVars = vars} varsOfparent = case nexts of
-        [] → checkContainsAll vars varsOfparent
-        _ → checkContainsAll vars varsOfparent && all (\world -> checkKripke' world $ varsOfparent `Set.union` Set.fromList vars)  nexts
+    checkKripke' World{worldNexts = nexts, worldVars = vars} varsOfparent =
+            checkContainsAll vars varsOfparent
+        && (null nexts || all (\world -> checkKripke' world $ varsOfparent `Set.union` vars)  nexts)
 
-    checkContainsAll ∷ [String] → Set.Set String → Bool
+    checkContainsAll ∷ Set.Set String → Set.Set String → Bool
     checkContainsAll xs set = all (`Set.member` set) xs
 
-checkExprInKripke ∷ World → Expr → Bool
-checkExprInKripke root expr =
-    checkExprInWorld root expr &&
-    all (`checkExprInKripke` expr) (worldNexts root)
+checkExprInKripke ∷ Kripke → Expr → Bool
+checkExprInKripke kripke expr = all (`rec'checkExprInKripke` expr) (kripkeRoots kripke)
+    where
+        rec'checkExprInKripke ∷ World → Expr → Bool
+        rec'checkExprInKripke root expr = root `checkExprInWorld` expr &&
+            all (`rec'checkExprInKripke` expr) (worldNexts root)
 
 checkExprInWorld ∷ World → Expr → Bool
 checkExprInWorld world expr = case expr of
@@ -94,11 +96,15 @@ checkExprInWorld world expr = case expr of
     (a :-> b) → implPred a b world &&
                 (null (worldNexts world) ||
                  all (implPred a b) (worldNexts world))
-    (Var name) → name `Set.member` (Set.fromList $ worldVars world)
+    (Var name) → name `Set.member` worldVars world
 
     where
         notPred expr = not . (`checkExprInWorld` expr)
         implPred a b = \x → not (checkExprInWorld x a) || checkExprInWorld x b
 
-kripkeToHeything ∷ World → Heyting
-kripkeToHeything world = undefined
+kripkeToHeything ∷ Kripke → Heyting -- TODO
+kripkeToHeything world = undefined -- where
+--
+--     all = map getSubTree root
+--
+--     getelements
