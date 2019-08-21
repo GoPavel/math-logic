@@ -10,7 +10,7 @@ import           System.IO
 import           Utility
 
 -- inputFile = "input.txt"
-inputFile = "tests/test2.in"
+inputFile = "tests/test1.in"
 outputFile = "output.txt"
 -- checkputFile = "checkput.txt"
 

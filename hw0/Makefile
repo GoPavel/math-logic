@@ -1,5 +1,6 @@
 # HC=/opt/ghc/7.10.3/bin/ghc
-HC=ghc
+HC=stack ghc --
+#HC=ghc
 SOURCES=src/Main.hs src/Grammar.hs
 GEN_SOURCES=src/Lexer.x src/Parser.y
 GENERATED=src/Lexer.hs src/Parser.hs

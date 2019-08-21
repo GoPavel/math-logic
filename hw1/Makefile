@@ -1,6 +1,7 @@
-HC=/opt/ghc/7.10.3/bin/ghc
-# HC=ghc
-SOURCES=src/Main.hs src/Grammar.hs
+# HC=/opt/ghc/7.10.3/bin/ghc
+HC=stack ghc --
+#HC=ghc
+SOURCES=Main.hs src/Grammar.hs
 GEN_SOURCES=src/Lexer.x src/Parser.y
 GENERATED=src/Lexer.hs src/Parser.hs
 PACKAGE=hw1.zip
@@ -18,7 +19,7 @@ clean:
 	rm -f parser
 
 parser: $(GENERATED) $(SOURCES)
-	$(HC) -O3 -i./src -tmpdir . ./src/Main.hs -o parser
+	$(HC) -O3 -i./src -tmpdir . Main.hs -o parser
 
 $(GENERATED): $(GEN_SOURCES) $(SOURCES)
 	alex src/Lexer.x -o src/Lexer.hs

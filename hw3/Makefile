@@ -1,5 +1,6 @@
-HC=/opt/ghc/7.10.3/bin/ghc
+# HC=/opt/ghc/7.10.3/bin/ghc
 # HC=ghc
+HC=stack ghc --
 SOURCES=Main.hs src/Grammar.hs src/Deduction.hs src/Proof.hs src/ProofGenerator.hs src/Utility.hs src/Annotation.hs
 GEN_SOURCES=src/Lexer.x src/Parser.y
 GENERATED=src/Lexer.hs src/Parser.hs
